@@ -20,7 +20,7 @@ typedef struct {
     AnthySegment *segment, *cur_segment;
 } AnthyPreedit;
 
-enum { ANTHY_NONE = 1, ANTHY_CONVERTING = 3, ANTHY_HIRAGANA = 2, PAGE_SIZE = LINK_MAX_CANDIDATES };
+enum { ANTHY_CONVERTING = 3, ANTHY_HIRAGANA = 2, PAGE_SIZE = LINK_MAX_CANDIDATES };
 
 static struct {
     void *lib;
@@ -47,10 +47,11 @@ static struct {
 
 struct Japanese {
     AnthyConfig *config;
-    AnthyContext *ctx;
+    AnthyContext *ctx, *preview;
     char *text, *commit;
     char *choices[PAGE_SIZE];
-    int state, first, count, selected;
+    int first, count, selected;
+    GArray *edits;
 };
 
 static bool anthy_load(void)
@@ -75,16 +76,47 @@ error:
     return false;
 }
 
+static void collect_choices(Japanese *jp, AnthyContext *ctx, AnthyPreedit *v)
+{
+    for (int i = 0; i < PAGE_SIZE; i++) g_clear_pointer(&jp->choices[i], g_free);
+    jp->count = jp->first = jp->selected = 0;
+    if (!v || v->state != ANTHY_CONVERTING || !v->cur_segment ||
+        v->cur_segment->nr_cand <= 0) return;
+    AnthySegment *active = v->cur_segment;
+    int index = CLAMP(active->cand_no, 0, active->nr_cand - 1);
+    int page_size = link_settings.candidates;
+    jp->first = (index / page_size) * page_size;
+    jp->selected = index - jp->first;
+    for (int i = 0; i < page_size && jp->first + i < active->nr_cand; i++) {
+        AnthySegment *candidate = anthy.get_candidate(ctx, jp->first + i);
+        if (!candidate) break;
+        if (candidate->str) {
+            GString *phrase = g_string_new(NULL);
+            for (AnthySegment *s = v->segment; s; s = s->next) {
+                const char *part = s == active ? candidate->str : s->str;
+                if (part) g_string_append(phrase, part);
+            }
+            jp->choices[jp->count++] = g_string_free(phrase, FALSE);
+        }
+        anthy.free_segment(candidate);
+    }
+}
+
+static void reset_context(AnthyContext *ctx)
+{
+    anthy.quit(ctx); /* Conversion -> editing -> idle. */
+    anthy.quit(ctx);
+}
+
 static void refresh(Japanese *jp)
 {
     g_clear_pointer(&jp->text, g_free);
-    for (int i = 0; i < PAGE_SIZE; i++) g_clear_pointer(&jp->choices[i], g_free);
-    jp->count = jp->first = jp->selected = 0;
-    jp->state = ANTHY_NONE;
-    if (!jp->ctx) return;
     AnthyPreedit *v = anthy.get_preedit(jp->ctx);
-    if (!v) return;
-    jp->state = v->state;
+    reset_context(jp->preview);
+    if (!v) {
+        collect_choices(jp, jp->preview, NULL);
+        return;
+    }
     if (v->commit && *v->commit) {
         g_clear_pointer(&jp->commit, g_free);
         jp->commit = g_strdup(v->commit);
@@ -93,30 +125,36 @@ static void refresh(Japanese *jp)
     for (AnthySegment *s = v->segment; s; s = s->next)
         if (s->str) g_string_append(text, s->str);
     jp->text = g_string_free(text, FALSE);
-    if (jp->state == ANTHY_CONVERTING && v->cur_segment && v->cur_segment->nr_cand > 0) {
-        AnthySegment *active = v->cur_segment;
-        int index = CLAMP(active->cand_no, 0, active->nr_cand - 1);
-        int page_size = link_settings.candidates;
-        jp->first = (index / page_size) * page_size;
-        jp->selected = index - jp->first;
-        for (int i = 0; i < page_size && jp->first + i < active->nr_cand; i++) {
-            AnthySegment *candidate = anthy.get_candidate(jp->ctx, jp->first + i);
-            if (!candidate) break;
-            if (candidate->str) jp->choices[jp->count++] = g_strdup(candidate->str);
-            anthy.free_segment(candidate);
-        }
-    }
     anthy.free_preedit(v);
+    /* Conversion flushes pending romaji, so keep it out of the editable context. */
+    if (*jp->text) {
+        for (guint i = 0; i < jp->edits->len; i++) {
+            uint32_t key = g_array_index(jp->edits, uint32_t, i);
+            if (key == XKB_KEY_BackSpace) anthy.erase_prev(jp->preview);
+            else if (key == XKB_KEY_Left || key == XKB_KEY_Right)
+                anthy.move(jp->preview, key == XKB_KEY_Left ? -1 : 1);
+            else anthy.key(jp->preview, (int)key);
+        }
+        anthy.space(jp->preview);
+    } else g_array_set_size(jp->edits, 0);
+    v = anthy.get_preedit(jp->preview);
+    collect_choices(jp, jp->preview, v);
+    if (v) anthy.free_preedit(v);
 }
 
 Japanese *japanese_new(void)
 {
     if (!anthy_load()) return NULL;
     Japanese *jp = g_new0(Japanese, 1);
+    jp->edits = g_array_new(FALSE, FALSE, sizeof(uint32_t));
     jp->config = anthy.create_config();
-    if (jp->config) jp->ctx = anthy.create_context(jp->config);
-    if (!jp->ctx) { japanese_free(jp); return NULL; }
+    if (jp->config) {
+        jp->ctx = anthy.create_context(jp->config);
+        jp->preview = anthy.create_context(jp->config);
+    }
+    if (!jp->ctx || !jp->preview) { japanese_free(jp); return NULL; }
     anthy.map_select(jp->ctx, ANTHY_HIRAGANA);
+    anthy.map_select(jp->preview, ANTHY_HIRAGANA);
     refresh(jp);
     return jp;
 }
@@ -124,8 +162,10 @@ Japanese *japanese_new(void)
 void japanese_free(Japanese *jp)
 {
     if (!jp) return;
+    if (jp->preview) anthy.free_context(jp->preview);
     if (jp->ctx) anthy.free_context(jp->ctx);
     if (jp->config) anthy.free_config(jp->config);
+    g_array_unref(jp->edits);
     g_free(jp->text);
     g_free(jp->commit);
     for (int i = 0; i < PAGE_SIZE; i++) g_free(jp->choices[i]);
@@ -135,14 +175,7 @@ void japanese_free(Japanese *jp)
 void japanese_clear(Japanese *jp)
 {
     if (!jp) return;
-    if (jp->ctx) {
-        anthy.quit(jp->ctx);
-        if (anthy.get_preedit) {
-            AnthyPreedit *v = anthy.get_preedit(jp->ctx);
-            if (v && v->state != ANTHY_NONE) anthy.quit(jp->ctx);
-            if (v) anthy.free_preedit(v);
-        }
-    }
+    reset_context(jp->ctx);
     refresh(jp);
     g_clear_pointer(&jp->commit, g_free);
 }
@@ -151,30 +184,46 @@ bool japanese_key(Japanese *jp, uint32_t sym, bool shift)
 {
     if (!jp || !jp->ctx) return false;
     bool composing = jp->text && *jp->text;
-    bool converting = jp->state == ANTHY_CONVERTING;
-    if (converting && !shift && sym >= XKB_KEY_1 && sym <= XKB_KEY_9 &&
-        sym - XKB_KEY_1 < (uint32_t)jp->count) {
-        anthy.select_candidate(jp->ctx, jp->first + (int)(sym - XKB_KEY_1));
-        anthy.commit(jp->ctx);
+    bool number = !shift && sym >= XKB_KEY_1 && sym <= XKB_KEY_9 &&
+        sym - XKB_KEY_1 < (uint32_t)jp->count;
+    if (jp->count && (number || sym == XKB_KEY_space)) {
+        int index = number ? (int)(sym - XKB_KEY_1) : jp->selected;
+        anthy.select_candidate(jp->preview, jp->first + index);
+        anthy.commit(jp->preview);
+        AnthyPreedit *v = anthy.get_preedit(jp->preview);
+        if (v && v->commit && *v->commit) {
+            g_free(jp->commit);
+            jp->commit = g_strdup(v->commit);
+        }
+        if (v) anthy.free_preedit(v);
+        reset_context(jp->ctx);
     } else if (sym == XKB_KEY_space && composing) {
-        anthy.space(jp->ctx);
+        anthy.commit(jp->ctx);
     } else if ((sym == XKB_KEY_Return || sym == XKB_KEY_KP_Enter) && composing) {
         anthy.commit(jp->ctx);
     } else if (sym == XKB_KEY_BackSpace && composing) {
         anthy.erase_prev(jp->ctx);
+        g_array_append_val(jp->edits, sym);
     } else if (sym == XKB_KEY_Escape && composing) {
         anthy.quit(jp->ctx);
-    } else if ((sym == XKB_KEY_Up || sym == XKB_KEY_Down) && converting) {
-        if (sym == XKB_KEY_Up) anthy.prev_candidate(jp->ctx);
-        else anthy.next_candidate(jp->ctx);
+    } else if ((sym == XKB_KEY_Up || sym == XKB_KEY_Down) && jp->count) {
+        if (sym == XKB_KEY_Up) anthy.prev_candidate(jp->preview);
+        else anthy.next_candidate(jp->preview);
+        AnthyPreedit *v = anthy.get_preedit(jp->preview);
+        collect_choices(jp, jp->preview, v);
+        if (v) anthy.free_preedit(v);
+        return true;
     } else if ((sym == XKB_KEY_Left || sym == XKB_KEY_Right) && composing) {
         anthy.move(jp->ctx, sym == XKB_KEY_Left ? -1 : 1);
+        g_array_append_val(jp->edits, sym);
     } else if ((sym >= XKB_KEY_a && sym <= XKB_KEY_z) ||
                (sym >= XKB_KEY_A && sym <= XKB_KEY_Z) ||
                sym == XKB_KEY_minus || sym == XKB_KEY_comma || sym == XKB_KEY_period ||
                sym == XKB_KEY_bracketleft || sym == XKB_KEY_bracketright ||
                (sym == XKB_KEY_apostrophe && composing)) {
-        anthy.key(jp->ctx, (int)g_ascii_tolower((gchar)sym));
+        sym = (uint32_t)g_ascii_tolower((gchar)sym);
+        anthy.key(jp->ctx, (int)sym);
+        g_array_append_val(jp->edits, sym);
     } else {
         return false;
     }
