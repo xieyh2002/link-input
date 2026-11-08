@@ -2,12 +2,12 @@
   <img src="assets/banner.svg" alt="Link Input — Linux / Wayland" width="900" />
   <h1>link输入法</h1>
   <p>为 niri 做的轻量输入法。全拼、双拼、英文和日文，共用一套候选栏和设置。</p>
-  <p><a href="#快速试用">快速试用</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#词库来源">词库来源</a> · <a href="#应用兼容">兼容性</a></p>
+  <p><a href="https://github.com/xieyh2002/link-input/releases">下载安装包</a> · <a href="#快速试用">快速试用</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#词库来源">词库来源</a> · <a href="#应用兼容">兼容性</a></p>
 </div>
 
 ## 候选栏
 
-拼音或假名留在应用的光标处，候选词在下方单行排列。每页显示 1–9 项；浅色和深色可自动跟随系统，也能固定主题和分别配色。
+拼音或假名留在应用的光标处，候选词在下方单行排列，长词按实际宽度显示。每页显示 1–9 项；浅色和深色可自动跟随系统，也能固定主题和分别配色。
 
 | 浅色 | 深色 |
 | --- | --- |
@@ -32,13 +32,13 @@
 | --- | --- |
 | 简体全拼 | [Rime 朙月拼音](https://github.com/rime/rime-luna-pinyin) 的 `luna_pinyin_simp` 方案，使用 `luna_pinyin.dict.yaml`。 |
 | 小鹤双拼 | [Rime 双拼](https://github.com/rime/rime-double-pinyin) 的 `double_pinyin_flypy` 方案，与全拼共用朙月拼音词库。 |
-| 日文 | [Anthy Unicode](https://github.com/fujiwarat/anthy-unicode) 随系统安装的日文词典，用于假名转汉字。 |
+| 日文 | [Anthy Unicode](https://github.com/fujiwarat/anthy-unicode) 或 [Debian Anthy](https://salsa.debian.org/debian/anthy) 随系统安装的日文词典，用于假名转汉字。 |
 
 中文由 [librime](https://github.com/rime/librime) 转换，默认从系统的 `/usr/share/rime-data` 读取方案和词库。英文直接输入，无需词库；常用 emoji 联想使用 Link 自带的映射。仓库不附带系统词库。
 
 ## 设置
 
-安装后在终端输入 `link`，或在应用菜单打开「link输入法设置」。
+安装后在应用菜单打开「link输入法设置」，也可以从终端启动：源码默认安装使用 `link`，Debian 安装包使用 `link-input`。
 
 <img src="assets/settings.png" alt="设置窗口：默认语言、中文方案、日语开关、候选数、主题和颜色" width="620" />
 
@@ -46,7 +46,11 @@
 - **外观**：跟随系统、固定浅色或固定深色；浅色和深色各可调整背景、文字、选中项和边框。
 - **候选**：设置每页数量，默认 7 个。点击「保存并应用」重新加载输入法。关闭设置窗口不会退出输入法。
 
-带文件参数的 `link` 仍交给系统原有的硬链接命令。
+源码安装的 `link` 收到文件参数时，仍交给系统原有的硬链接命令。
+
+## Debian 安装包
+
+从 [GitHub Releases](https://github.com/xieyh2002/link-input/releases) 下载 Debian 13（amd64）的 `.deb`，用 `sudo apt install ./文件名.deb` 安装，再按[安装指南](docs/installation.md#登录后启用)配置 niri。其他发行版可以[从源码安装](docs/installation.md#从源码安装)。
 
 ## 快速试用
 

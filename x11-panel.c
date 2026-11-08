@@ -13,6 +13,8 @@ static Display *display;
 static Window window;
 static int screen;
 static gboolean mapped;
+static PanelContent content;
+static int width, height, left, top;
 
 static gboolean open_panel(void)
 {
@@ -30,12 +32,40 @@ static gboolean open_panel(void)
     Atom tooltip = XInternAtom(display, "_NET_WM_WINDOW_TYPE_TOOLTIP", False);
     XChangeProperty(display, window, type, XA_ATOM, 32, PropModeReplace,
                     (const unsigned char *)&tooltip, 1);
+    XShapeCombineRectangles(display, window, ShapeInput, 0, 0, NULL, 0, ShapeSet, Unsorted);
     return TRUE;
+}
+
+static void position_panel(int x, int y, int caret_height, int w, int h)
+{
+    int screen_w = DisplayWidth(display, screen), screen_h = DisplayHeight(display, screen);
+    int next_left = CLAMP(x, 0, MAX(0, screen_w - w));
+    int next_top = y + CLAMP(caret_height, 0, 40) + 3;
+    if (next_top + h > screen_h) next_top = y - h - 3;
+    next_top = CLAMP(next_top, 0, MAX(0, screen_h - h));
+    if (w != width || h != height)
+        XMoveResizeWindow(display, window, next_left, next_top, w, h);
+    else if (left != next_left || top != next_top)
+        XMoveWindow(display, window, next_left, next_top);
+    else return;
+    width = w;
+    height = h;
+    left = next_left;
+    top = next_top;
 }
 
 void x11_panel_show(int x, int y, int caret_height, const char *const *items, int count, int selected, bool dark)
 {
     if (g_getenv("QINGYIN_NO_COMPAT_PANEL") || !count || !open_panel()) { x11_panel_hide(); return; }
+    if (!panel_content_update(&content, items, count, selected, 1, dark)) {
+        position_panel(x, y, caret_height, width, height);
+        if (!mapped) {
+            XMapRaised(display, window);
+            mapped = TRUE;
+        }
+        XFlush(display);
+        return;
+    }
     int w, h;
     panel_size(items, count, selected == PANEL_STATUS, &w, &h);
     cairo_surface_t *image = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, w, h);
@@ -65,13 +95,8 @@ void x11_panel_show(int x, int y, int caret_height, const char *const *items, in
     }
     cairo_surface_destroy(image);
     Pixmap shape = XCreateBitmapFromData(display, window, (const char *)mask, w, h);
-    int screen_w = DisplayWidth(display, screen), screen_h = DisplayHeight(display, screen);
-    int top = y + CLAMP(caret_height, 0, 40) + 3;
-    if (top + h > screen_h) top = y - h - 3;
-    XMoveResizeWindow(display, window, CLAMP(x, 0, MAX(0, screen_w - w)),
-                       CLAMP(top, 0, MAX(0, screen_h - h)), w, h);
+    position_panel(x, y, caret_height, w, h);
     XShapeCombineMask(display, window, ShapeBounding, 0, 0, shape, ShapeSet);
-    XShapeCombineRectangles(display, window, ShapeInput, 0, 0, NULL, 0, ShapeSet, Unsorted);
     XFreePixmap(display, shape);
     XSetWindowBackgroundPixmap(display, window, pixmap);
     XFreePixmap(display, pixmap);
@@ -97,4 +122,6 @@ void x11_panel_close(void)
     XCloseDisplay(display);
     display = NULL;
     mapped = FALSE;
+    panel_content_clear(&content);
+    width = height = left = top = 0;
 }

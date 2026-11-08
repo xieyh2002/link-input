@@ -3,11 +3,36 @@
 
 #include <cairo.h>
 #include <pango/pangocairo.h>
+#include <string.h>
 
 enum {
     MARGIN = 2, INSET = 4, ITEM_HEIGHT = 31, ITEM_GAP = 2,
-    ITEM_PAD = 8, END_PAD = 8, NUMBER_GAP = 3, MAX_TEXT_WIDTH = 120,
+    ITEM_PAD = 8, END_PAD = 8, NUMBER_GAP = 3,
 };
+
+bool panel_content_update(PanelContent *content, const char *const *items,
+                          int count, int selected, int scale, bool dark)
+{
+    bool changed = content->count != count || content->selected != selected ||
+                   content->scale != scale || content->dark != dark;
+    for (int i = 0; i < MAX(count, content->count); i++) {
+        const char *item = i < count ? items[i] : NULL;
+        if (!g_strcmp0(content->items[i], item)) continue;
+        g_free(content->items[i]);
+        content->items[i] = g_strdup(item);
+        changed = true;
+    }
+    content->count = count;
+    content->selected = selected;
+    content->scale = scale;
+    content->dark = dark;
+    return changed;
+}
+
+void panel_content_clear(PanelContent *content)
+{
+    panel_content_update(content, NULL, 0, 0, 0, false);
+}
 
 static PangoLayout *new_layout(cairo_t *cr)
 {
@@ -16,17 +41,15 @@ static PangoLayout *new_layout(cairo_t *cr)
     pango_layout_set_font_description(layout, font);
     pango_font_description_free(font);
     pango_layout_set_single_paragraph_mode(layout, TRUE);
-    pango_layout_set_ellipsize(layout, PANGO_ELLIPSIZE_END);
     return layout;
 }
 
 static int measure(PangoLayout *layout, const char *text)
 {
     int width;
-    pango_layout_set_width(layout, -1);
     pango_layout_set_text(layout, text, -1);
     pango_layout_get_pixel_size(layout, &width, NULL);
-    return MIN(width, MAX_TEXT_WIDTH);
+    return width;
 }
 
 static void rounded(cairo_t *cr, double x, double y, double w, double h, double r)
@@ -57,10 +80,9 @@ void panel_size(const char *const *candidates, int count, bool status, int *widt
     cairo_surface_destroy(surface);
 }
 
-static void label(cairo_t *cr, PangoLayout *layout, const char *text, int width, int x, int y)
+static void label(cairo_t *cr, PangoLayout *layout, const char *text, int x, int y)
 {
     int height;
-    pango_layout_set_width(layout, width < 0 ? -1 : width * PANGO_SCALE);
     pango_layout_set_text(layout, text, -1);
     pango_layout_get_pixel_size(layout, NULL, &height);
     cairo_move_to(cr, x, y + (ITEM_HEIGHT - height) / 2.0);
@@ -108,8 +130,8 @@ void panel_draw(unsigned char *pixels, int width, int height, int stride,
                               114 * (selection & 255);
         uint32_t highlight_text = brightness > 165000 ? 0x151923 : 0xffffff;
         link_color(cr, i == selected ? highlight_text : palette->text);
-        if (selected != PANEL_STATUS) label(cr, layout, number, -1, x + ITEM_PAD, y);
-        label(cr, layout, candidates[i], text_width, x + ITEM_PAD + number_width, y);
+        if (selected != PANEL_STATUS) label(cr, layout, number, x + ITEM_PAD, y);
+        label(cr, layout, candidates[i], x + ITEM_PAD + number_width, y);
         x += item_width + ITEM_GAP;
     }
 

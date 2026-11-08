@@ -5,7 +5,7 @@
 #include <glib.h>
 #include <xkbcommon/xkbcommon-keysyms.h>
 
-/* Public layouts and constants of libanthyinput-unicode.so.0 (anthy/input.h).
+/* Public layouts and constants from anthy/input.h.
  * Load it on demand so the other modes work without the Japanese library. */
 typedef struct anthy_input_config AnthyConfig;
 typedef struct anthy_input_context AnthyContext;
@@ -24,6 +24,7 @@ enum { ANTHY_CONVERTING = 3, ANTHY_HIRAGANA = 2, PAGE_SIZE = LINK_MAX_CANDIDATES
 
 static struct {
     void *lib;
+    bool legacy_encoding;
     int (*init)(void);
     AnthyConfig *(*create_config)(void);
     void (*free_config)(AnthyConfig *);
@@ -58,6 +59,8 @@ static bool anthy_load(void)
 {
     if (anthy.lib) return true;
     anthy.lib = dlopen("libanthyinput-unicode.so.0", RTLD_NOW | RTLD_LOCAL);
+    anthy.legacy_encoding = !anthy.lib;
+    if (!anthy.lib) anthy.lib = dlopen("libanthyinput.so.0", RTLD_NOW | RTLD_LOCAL);
     if (!anthy.lib) return false;
 #define LOAD(name) do { \
     anthy.name = (__typeof__(anthy.name))dlsym(anthy.lib, "anthy_input_" #name); \
@@ -74,6 +77,21 @@ error:
     dlclose(anthy.lib);
     anthy.lib = NULL;
     return false;
+}
+
+static char *copy_text(const char *text)
+{
+    if (!anthy.legacy_encoding) return g_strdup(text);
+    char *utf8 = g_convert(text, -1, "UTF-8", "EUC-JP", NULL, NULL, NULL);
+    return utf8 ? utf8 : g_utf8_make_valid(text, -1);
+}
+
+static char *take_text(GString *text)
+{
+    if (!anthy.legacy_encoding) return g_string_free(text, FALSE);
+    char *utf8 = copy_text(text->str);
+    g_string_free(text, TRUE);
+    return utf8;
 }
 
 static void collect_choices(Japanese *jp, AnthyContext *ctx, AnthyPreedit *v)
@@ -96,7 +114,7 @@ static void collect_choices(Japanese *jp, AnthyContext *ctx, AnthyPreedit *v)
                 const char *part = s == active ? candidate->str : s->str;
                 if (part) g_string_append(phrase, part);
             }
-            jp->choices[jp->count++] = g_string_free(phrase, FALSE);
+            jp->choices[jp->count++] = take_text(phrase);
         }
         anthy.free_segment(candidate);
     }
@@ -119,12 +137,12 @@ static void refresh(Japanese *jp)
     }
     if (v->commit && *v->commit) {
         g_clear_pointer(&jp->commit, g_free);
-        jp->commit = g_strdup(v->commit);
+        jp->commit = copy_text(v->commit);
     }
     GString *text = g_string_new(NULL);
     for (AnthySegment *s = v->segment; s; s = s->next)
         if (s->str) g_string_append(text, s->str);
-    jp->text = g_string_free(text, FALSE);
+    jp->text = take_text(text);
     anthy.free_preedit(v);
     /* Conversion flushes pending romaji, so keep it out of the editable context. */
     if (*jp->text) {
@@ -193,7 +211,7 @@ bool japanese_key(Japanese *jp, uint32_t sym, bool shift)
         AnthyPreedit *v = anthy.get_preedit(jp->preview);
         if (v && v->commit && *v->commit) {
             g_free(jp->commit);
-            jp->commit = g_strdup(v->commit);
+            jp->commit = copy_text(v->commit);
         }
         if (v) anthy.free_preedit(v);
         reset_context(jp->ctx);

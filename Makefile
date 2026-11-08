@@ -48,19 +48,21 @@ build/qingyin-ibus: ibus.c x11-panel.c x11-panel.h panel.c panel.h emoji.h theme
 
 PREFIX ?= $(HOME)/.local
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
+SETTINGS_COMMAND ?= $(if $(filter /usr,$(PREFIX)),link-input,link)
 install-settings: integration/link integration/link-settings.py integration/link-input-apply integration/io.github.qingyin.LinkSettings.desktop assets/icon.svg
-	install -Dm755 integration/link "$(DESTDIR)$(PREFIX)/bin/link"
+	install -Dm755 integration/link "$(DESTDIR)$(PREFIX)/bin/$(SETTINGS_COMMAND)"
 	install -Dm644 integration/link-settings.py "$(DESTDIR)$(PREFIX)/libexec/link-input/link-settings.py"
 	install -Dm755 integration/link-input-apply "$(DESTDIR)$(PREFIX)/libexec/link-input/link-input-apply"
 
 	install -Dm644 assets/icon.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/link-input.svg"
 	install -Dm644 integration/io.github.qingyin.LinkSettings.desktop "$(DESTDIR)$(PREFIX)/share/applications/io.github.qingyin.LinkSettings.desktop"
-	sed -i 's|^Exec=link --settings$$|Exec="$(PREFIX)/bin/link" --settings|' "$(DESTDIR)$(PREFIX)/share/applications/io.github.qingyin.LinkSettings.desktop"
+	sed -i 's|^Exec=link --settings$$|Exec="$(PREFIX)/bin/$(SETTINGS_COMMAND)" --settings|' "$(DESTDIR)$(PREFIX)/share/applications/io.github.qingyin.LinkSettings.desktop"
 
 install: build/qingyin build/qingyin-ibus install-settings
 	install -Dm755 build/qingyin "$(DESTDIR)$(PREFIX)/bin/qingyin"
 	install -Dm755 build/qingyin-ibus "$(DESTDIR)$(PREFIX)/bin/qingyin-ibus"
 	install -Dm755 integration/start-ibus.sh "$(DESTDIR)$(PREFIX)/bin/qingyin-start-ibus"
 	install -Dm644 integration/qingyin-ibus.service "$(DESTDIR)$(SYSTEMD_USER_DIR)/qingyin-ibus.service"
+	sed -i 's|@BINDIR@|$(PREFIX)/bin|' "$(DESTDIR)$(SYSTEMD_USER_DIR)/qingyin-ibus.service"
 
 .PHONY: install install-settings

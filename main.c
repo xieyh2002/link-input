@@ -26,6 +26,16 @@
 #define PURPOSE_PASSWORD 8
 #define PURPOSE_PIN 9
 
+struct app;
+struct panel_buffer {
+    struct app *app;
+    struct wl_shm_pool *pool;
+    struct wl_buffer *buffer;
+    unsigned char *pixels;
+    int capacity, width, height;
+    bool busy;
+};
+
 struct app {
     Theme theme;
     struct wl_display *display;
@@ -33,6 +43,10 @@ struct app {
     struct wl_shm *shm;
     struct wl_seat *seat;
     struct wl_surface *surface;
+    struct wl_callback *panel_frame;
+    struct panel_buffer panel_buffers[3];
+    PanelContent panel;
+    bool panel_pending;
     struct zwp_input_method_manager_v2 *manager;
     struct zwp_virtual_keyboard_manager_v1 *vk_manager;
     struct zwp_input_method_v2 *im;
@@ -98,10 +112,57 @@ static bool engine_start(struct app *a) {
     return true;
 }
 
+static void draw_panel(struct app *a);
+
 static void buffer_release(void *data, struct wl_buffer *buffer) {
-    wl_buffer_destroy(buffer);
+    struct panel_buffer *slot = data;
+    slot->busy = false;
+    draw_panel(slot->app);
 }
 static const struct wl_buffer_listener buffer_listener = {buffer_release};
+
+static void free_panel_buffer(struct panel_buffer *slot) {
+    if (slot->buffer) wl_buffer_destroy(slot->buffer);
+    if (slot->pool) wl_shm_pool_destroy(slot->pool);
+    if (slot->pixels) munmap(slot->pixels, slot->capacity);
+    *slot = (struct panel_buffer){0};
+}
+
+static bool prepare_buffer(struct app *a, struct panel_buffer *slot, int w, int h) {
+    const int bytes = w * h * 4;
+    if (bytes > slot->capacity) {
+        int capacity = 4096;
+        while (capacity < bytes) capacity *= 2;
+        int fd = memfd_create("qingyin-panel", MFD_CLOEXEC);
+        if (fd < 0) return false;
+        if (ftruncate(fd, capacity) < 0) { close(fd); return false; }
+        unsigned char *pixels = mmap(NULL, capacity, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
+        if (pixels == MAP_FAILED) { close(fd); return false; }
+        struct wl_shm_pool *pool = wl_shm_create_pool(a->shm, fd, capacity);
+        close(fd);
+        if (!pool) { munmap(pixels, capacity); return false; }
+        free_panel_buffer(slot);
+        *slot = (struct panel_buffer){.app = a, .pool = pool, .pixels = pixels,
+                                      .capacity = capacity};
+    }
+    if (!slot->buffer || slot->width != w || slot->height != h) {
+        if (slot->buffer) wl_buffer_destroy(slot->buffer);
+        slot->buffer = wl_shm_pool_create_buffer(slot->pool, 0, w, h, w * 4, WL_SHM_FORMAT_ARGB8888);
+        if (!slot->buffer) return false;
+        wl_buffer_add_listener(slot->buffer, &buffer_listener, slot);
+        slot->width = w;
+        slot->height = h;
+    }
+    return true;
+}
+
+static void frame_done(void *data, struct wl_callback *callback, uint32_t time) {
+    struct app *a = data;
+    wl_callback_destroy(callback);
+    a->panel_frame = NULL;
+    draw_panel(a);
+}
+static const struct wl_callback_listener frame_listener = {frame_done};
 
 static void clear_status(struct app *a) {
     if (a->status_timer) g_source_remove(a->status_timer);
@@ -111,37 +172,56 @@ static void clear_status(struct app *a) {
 
 static void hide(struct app *a) {
     clear_status(a);
+    panel_content_clear(&a->panel);
+    a->panel_pending = false;
+    if (a->panel_frame) {
+        wl_callback_destroy(a->panel_frame);
+        a->panel_frame = NULL;
+    }
     if (!a->visible) return;
     wl_surface_attach(a->surface, NULL, 0, 0);
     wl_surface_commit(a->surface);
     a->visible = false;
 }
 
-static void paint(struct app *a, const char *const *choices,
-                  int count, int selected) {
-    if (!count || !a->active) { hide(a); return; }
+static void draw_panel(struct app *a) {
+    /* Keep only the latest content while waiting for the compositor. */
+    if (!a->panel_pending || a->panel_frame || !a->active) return;
+    PanelContent *p = &a->panel;
+    bool has_free_slot = false;
+    for (unsigned i = 0; i < G_N_ELEMENTS(a->panel_buffers); i++)
+        has_free_slot |= !a->panel_buffers[i].busy;
+    if (!has_free_slot) return;
+    const char *const *items = (const char *const *)p->items;
     int width, height;
-    panel_size(choices, count, selected == PANEL_STATUS, &width, &height);
-    int stride = width * a->scale * 4;
-    int bytes = stride * height * a->scale;
-    int fd = memfd_create("qingyin-panel", MFD_CLOEXEC);
-    if (fd < 0) return;
-    if (ftruncate(fd, bytes) < 0) { close(fd); return; }
-    unsigned char *pixels = mmap(NULL, bytes, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
-    if (pixels == MAP_FAILED) { close(fd); return; }
-    panel_draw(pixels, width, height, stride, a->scale, choices, count, selected, a->theme.dark);
-    struct wl_shm_pool *pool = wl_shm_create_pool(a->shm, fd, bytes);
-    struct wl_buffer *buffer = wl_shm_pool_create_buffer(pool, 0, width * a->scale,
-                                  height * a->scale, stride, WL_SHM_FORMAT_ARGB8888);
-    wl_shm_pool_destroy(pool);
-    munmap(pixels, bytes);
-    close(fd);
-    wl_buffer_add_listener(buffer, &buffer_listener, NULL);
-    wl_surface_set_buffer_scale(a->surface, a->scale);
-    wl_surface_attach(a->surface, buffer, 0, 0);
-    wl_surface_damage_buffer(a->surface, 0, 0, width * a->scale, height * a->scale);
+    panel_size(items, p->count, p->selected == PANEL_STATUS, &width, &height);
+    int w = width * p->scale, h = height * p->scale;
+    struct panel_buffer *slot = NULL;
+    for (unsigned i = 0; i < G_N_ELEMENTS(a->panel_buffers); i++) {
+        struct panel_buffer *candidate = &a->panel_buffers[i];
+        if (candidate->busy) continue;
+        if (!slot || (candidate->width == w && candidate->height == h))
+            slot = candidate;
+        if (slot->width == w && slot->height == h) break;
+    }
+    if (!slot || !prepare_buffer(a, slot, w, h)) return;
+    panel_draw(slot->pixels, width, height, w * 4, p->scale, items, p->count, p->selected, p->dark);
+    a->panel_frame = wl_surface_frame(a->surface);
+    if (a->panel_frame) wl_callback_add_listener(a->panel_frame, &frame_listener, a);
+    wl_surface_set_buffer_scale(a->surface, p->scale);
+    wl_surface_attach(a->surface, slot->buffer, 0, 0);
+    wl_surface_damage_buffer(a->surface, 0, 0, w, h);
     wl_surface_commit(a->surface);
+    slot->busy = true;
+    a->panel_pending = false;
     a->visible = true;
+}
+
+static void paint(struct app *a, const char *const *choices, int count, int selected) {
+    if (!count || !a->active) { hide(a); return; }
+    if (panel_content_update(&a->panel, choices, count, selected, a->scale, a->theme.dark))
+        a->panel_pending = true;
+    draw_panel(a);
 }
 
 static gboolean expire_status(gpointer data) {
@@ -529,6 +609,10 @@ int main(int argc, char **argv) {
     clear_status(&a);
     theme_stop(&a.theme);
     if (a.input.jp) japanese_free(a.input.jp);
+    panel_content_clear(&a.panel);
+    if (a.panel_frame) wl_callback_destroy(a.panel_frame);
+    for (unsigned i = 0; i < G_N_ELEMENTS(a.panel_buffers); i++)
+        free_panel_buffer(&a.panel_buffers[i]);
     if (a.display) wl_display_disconnect(a.display);
     xkb_state_unref(a.keys);
     xkb_context_unref(a.xkb);

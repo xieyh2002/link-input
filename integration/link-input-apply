@@ -6,11 +6,14 @@ if [[ -z ${NIRI_SOCKET:-} ]] || ! niri msg version >/dev/null 2>&1; then
 fi
 exec 9>"${XDG_RUNTIME_DIR:?}/link-input-apply.lock"
 flock -w 3 9 || { printf '%s\n' '另一次设置应用仍在进行。' >&2; exit 1; }
-native="$HOME/.local/bin/qingyin"
-compat="$HOME/.local/bin/qingyin-ibus"
+prefix=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
+native="$prefix/bin/qingyin"
 systemctl --user restart qingyin-ibus.service
 while read -r pid; do
-    [[ "$(readlink "/proc/$pid/exe" 2>/dev/null)" == "$native" ]] || continue
+    case "$(readlink "/proc/$pid/exe" 2>/dev/null)" in
+        "$native"|"$native (deleted)") ;;
+        *) continue ;;
+    esac
     kill -TERM "$pid" 2>/dev/null || continue
     for ((i=0; i<40; i++)); do
         if ! kill -0 "$pid" 2>/dev/null; then break; fi

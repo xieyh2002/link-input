@@ -21,7 +21,8 @@ if ! ibus list-engine >/dev/null 2>&1; then
         sleep .1
     done
 fi
-"$HOME/.local/bin/qingyin-ibus" 9>&- &
+bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+"$bin_dir/qingyin-ibus" 9>&- &
 engine_pid=$!
 for ((i=0; i<600; i++)); do
     kill -0 "$engine_pid" 2>/dev/null || exit 1
