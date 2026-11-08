@@ -2,7 +2,7 @@
   <img src="assets/banner.svg" alt="Link Input — Linux / Wayland" width="900" />
   <h1>link输入法</h1>
   <p>为 niri 做的轻量输入法。全拼、双拼、英文和日文，共用一套候选栏和设置。</p>
-  <p><a href="#快速试用">快速试用</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#应用兼容">兼容性</a></p>
+  <p><a href="#快速试用">快速试用</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#词库来源">词库来源</a> · <a href="#应用兼容">兼容性</a></p>
 </div>
 
 ## 候选栏
@@ -25,6 +25,16 @@
 | 长按退格 | 在原生 Wayland 路径连续删除正在组合的拼音或罗马字。 |
 
 从日文切回中文会恢复上次用的全拼或双拼；`Shift` 加其他键仍作为组合键。英文模式直接输入半角标点。中文模式下 `/` 和 `\` 也直接上屏。全拼和双拼均支持常用彩色表情联想：例如全拼 `kaixin` 或小鹤双拼 `kdxb` 可选 😄，文字候选仍保留。
+
+## 词库来源
+
+| 输入模式 | 词库和方案 |
+| --- | --- |
+| 简体全拼 | [Rime 朙月拼音](https://github.com/rime/rime-luna-pinyin) 的 `luna_pinyin_simp` 方案，使用 `luna_pinyin.dict.yaml`。 |
+| 小鹤双拼 | [Rime 双拼](https://github.com/rime/rime-double-pinyin) 的 `double_pinyin_flypy` 方案，与全拼共用朙月拼音词库。 |
+| 日文 | [Anthy Unicode](https://github.com/fujiwarat/anthy-unicode) 随系统安装的日文词典，用于假名转汉字。 |
+
+中文由 [librime](https://github.com/rime/librime) 转换，默认从系统的 `/usr/share/rime-data` 读取方案和词库。英文直接输入，无需词库；常用 emoji 联想使用 Link 自带的映射。仓库不附带系统词库。
 
 ## 设置
 
