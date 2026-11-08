@@ -1,0 +1,10 @@
+[Unit]
+Description=link输入法兼容接口 for Qt and XWayland
+PartOf=niri.service
+After=niri.service
+
+[Service]
+Type=simple
+ExecStart=%h/.local/bin/qingyin-start-ibus
+Restart=on-failure
+RestartSec=2s

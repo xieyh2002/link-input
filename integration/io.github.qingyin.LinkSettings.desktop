@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=link输入法设置
+Name[en]=Link Input Settings
+Comment=配置输入模式和候选栏
+Exec=link --settings
+Icon=link-input
+Terminal=false
+Categories=Settings;DesktopSettings;

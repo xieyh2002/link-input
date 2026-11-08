@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="330" viewBox="0 0 1200 330" role="img" aria-labelledby="title">
+  <title id="title">Link 输入法 · Linux / Wayland</title>
+  <defs>
+    <linearGradient id="blue" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop stop-color="#086DF2"/>
+      <stop offset="1" stop-color="#103D9B"/>
+    </linearGradient>
+  </defs>
+  <rect width="1200" height="330" rx="28" fill="url(#blue)"/>
+  <g fill="none" stroke="#8DC6FF" opacity=".27">
+    <circle cx="1150" cy="44" r="182"/>
+    <circle cx="1150" cy="44" r="244"/>
+    <circle cx="1150" cy="44" r="305"/>
+  </g>
+  <g transform="translate(81 76) scale(1.42)">
+    <rect x="3" y="3" width="122" height="122" rx="28" fill="#0877F2" stroke="#7CB7FF" stroke-opacity=".62"/>
+    <g fill="none" stroke="#fff" stroke-width="7" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 46v35h17 M49 59v22 M63 81V59m0 8c0-5 3.5-8 8.5-8s8.5 3 8.5 8v14 M93 46v35m0-10 14-12M97 68l12 13"/>
+    </g>
+    <circle cx="49" cy="50" r="3.5" fill="#fff"/>
+  </g>
+  <g font-family="system-ui, sans-serif">
+    <text x="315" y="111" fill="#DCEEFF" font-size="22" letter-spacing="4">LINUX / WAYLAND</text>
+    <text x="308" y="190" fill="#fff" font-size="78" font-weight="750">Link Input</text>
+    <text x="315" y="245" fill="#DCEEFF" font-size="27">Pinyin · Shuangpin · English · Japanese</text>
+  </g>
+</svg>

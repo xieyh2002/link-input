@@ -1,0 +1,6 @@
+#!/bin/sh
+if [ "$#" -eq 0 ] || { [ "$#" -eq 1 ] && [ "$1" = "--settings" ]; }; then
+    prefix=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd) || exit 1
+    exec /usr/bin/python3 "$prefix/libexec/link-input/link-settings.py"
+fi
+exec /usr/bin/link "$@"
