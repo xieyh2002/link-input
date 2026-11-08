@@ -38,7 +38,7 @@
 
 ## 设置
 
-安装后在应用菜单打开「link输入法设置」，也可以从终端启动：源码默认安装使用 `link`，Debian 安装包使用 `link-input`。
+安装后在应用菜单打开「link输入法设置」，也可以从终端启动：源码默认安装使用 `link`，Debian 和 Fedora 安装包使用 `link-input`。
 
 <img src="assets/settings.png" alt="设置窗口：默认语言、中文方案、日语开关、候选数、主题和颜色" width="620" />
 
@@ -48,9 +48,16 @@
 
 源码安装的 `link` 收到文件参数时，仍交给系统原有的硬链接命令。
 
-## Debian 安装包
+## 安装包
 
-从 [GitHub Releases](https://github.com/xieyh2002/link-input/releases) 下载 Debian 13（amd64）的 `.deb`，用 `sudo apt install ./文件名.deb` 安装，再按[安装指南](docs/installation.md#登录后启用)配置 niri。其他发行版可以[从源码安装](docs/installation.md#从源码安装)。
+从 [GitHub Releases](https://github.com/xieyh2002/link-input/releases) 下载适合的安装包：
+
+| 系统 | 安装方式 |
+| --- | --- |
+| Fedora 44（x86_64） | `sudo dnf install ./文件名.rpm` |
+| Debian 13（amd64） | `sudo apt install ./文件名.deb` |
+
+安装后按[安装指南](docs/installation.md#登录后启用)配置 niri。其他发行版可以[从源码安装](docs/installation.md#从源码安装)。
 
 ## 快速试用
 

@@ -7,9 +7,18 @@ make all build/demo-entry
 bash demo/start.sh
 ```
 
-## Debian 13 安装包
+## 安装包
 
-在 [GitHub Releases](https://github.com/xieyh2002/link-input/releases) 下载 amd64 安装包。在下载目录运行（文件名按下载的版本调整）：
+在 [GitHub Releases](https://github.com/xieyh2002/link-input/releases) 下载对应安装包。在下载目录运行（文件名按下载的版本调整）：
+
+Fedora 44（x86_64）：
+
+```sh
+sudo dnf install ./link-input-0.1.0-1.fc44.x86_64.rpm
+systemctl --user daemon-reload
+```
+
+Debian 13（amd64）：
 
 ```sh
 sudo apt install ./link-input_0.1.0_amd64.deb
@@ -40,7 +49,7 @@ sudo dnf install gcc make pkgconf-pkg-config wayland-devel libxkbcommon-devel \
   cairo-devel pango-devel glib2-devel librime-devel brise \
   ibus ibus-devel libX11-devel libXext-devel gtk4 gtk4-devel python3-gobject-base
 # 可选：日文转换和彩色表情
-sudo dnf install anthy-unicode google-noto-emoji-color-fonts
+sudo dnf install anthy-unicode google-noto-color-emoji-fonts
 ```
 
 只构建核心程序时不需要 GTK 4 或 IBus 开发文件。日文转换优先使用 `libanthyinput-unicode.so.0`，也支持 Debian 13 的 `libanthyinput.so.0`。可用 `QINGYIN_RIME_DATA` 指定 Rime 共享方案目录；全拼需要 `luna_pinyin_simp`，小鹤双拼需要 `double_pinyin_flypy` 及它们的词典。
@@ -71,7 +80,7 @@ spawn-at-startup "sh" "-c" "exec \"$HOME/.local/bin/qingyin\""
 spawn-at-startup "systemctl" "--user" "start" "qingyin-ibus.service"
 ```
 
-若使用 Debian 安装包，把上面的第一条启动项替换为 `spawn-at-startup "/usr/bin/qingyin"`。
+若使用发行版安装包，把上面的第一条启动项替换为 `spawn-at-startup "/usr/bin/qingyin"`。
 
 - 原生 Wayland 应用使用输入法协议。同一个 Wayland 席位只允许运行一个输入法，请停止会抢占该席位的其他输入法及其 niri 自启动项。
 - IBus 兼容服务使用系统的 IBus 守护进程传递 Qt/XIM 输入。服务会尝试选择 link 输入法作为 IBus 当前引擎。若已经有 IBus 守护进程，它会复用；此时 XIM 是否可用取决于已有守护进程是否以 XIM 支持启动。
