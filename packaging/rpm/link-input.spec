@@ -1,5 +1,5 @@
 Name:           link-input
-Version:        0.1.0
+Version:        0.1.1
 Release:        1%{?dist}
 Summary:        Link input method for niri
 

@@ -14,14 +14,14 @@ bash demo/start.sh
 Fedora 44（x86_64）：
 
 ```sh
-sudo dnf install ./link-input-0.1.0-1.fc44.x86_64.rpm
+sudo dnf install ./link-input-0.1.1-1.fc44.x86_64.rpm
 systemctl --user daemon-reload
 ```
 
 Debian 13（amd64）：
 
 ```sh
-sudo apt install ./link-input_0.1.0_amd64.deb
+sudo apt install ./link-input_0.1.1_amd64.deb
 systemctl --user daemon-reload
 ```
 
@@ -35,7 +35,7 @@ systemctl --user daemon-reload
 sudo apt install build-essential pkg-config libwayland-dev libxkbcommon-dev \
   libcairo2-dev libpango1.0-dev libglib2.0-dev librime-dev libibus-1.0-dev \
   libx11-dev libxext-dev
-bash packaging/deb/build.sh 0.1.0
+bash packaging/deb/build.sh 0.1.1
 ```
 
 生成的安装包位于 `dist/`。
@@ -96,7 +96,7 @@ spawn-at-startup "systemctl" "--user" "start" "qingyin-ibus.service"
 
 ## 加装雾凇词库
 
-雾凇词库支持需要安装当前源码版本（v0.1.0 安装包尚未包含此功能）。装好 Git 后，运行 `link --install-rime-ice`（系统级安装使用 `link-input --install-rime-ice`），再打开设置点「保存并应用」。程序从 [雾凇拼音 GitHub 仓库](https://github.com/iDvel/rime-ice) 下载固定版本的中文词库；全拼和小鹤双拼共用词库，保留已有的 Rime 用户学习数据。首次编译可能需要一段时间。Link 不会替换用户自行维护的 Rime 方案补丁。
+雾凇词库支持从 v0.1.1 起提供。装好 Git 后，运行 `link --install-rime-ice`（系统级安装使用 `link-input --install-rime-ice`），再打开设置点「保存并应用」。程序从 [雾凇拼音 GitHub 仓库](https://github.com/iDvel/rime-ice) 下载固定版本的中文词库；全拼和小鹤双拼共用词库，保留已有的 Rime 用户学习数据。首次编译可能需要一段时间。Link 不会替换用户自行维护的 Rime 方案补丁。
 
 运行 `link --disable-rime-ice`（或 `link-input --disable-rime-ice`）并重新应用设置，可恢复朙月拼音词库。已下载的词库会保留，方便再次启用。
 
