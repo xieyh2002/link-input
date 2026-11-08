@@ -37,11 +37,17 @@ void panel_content_clear(PanelContent *content)
 static PangoLayout *new_layout(cairo_t *cr)
 {
     PangoLayout *layout = pango_cairo_create_layout(cr);
-    PangoFontDescription *font = pango_font_description_from_string("Noto Sans CJK SC, Noto Color Emoji, HanaMinB, BabelStone Han 14");
+    PangoFontDescription *font = pango_font_description_from_string("Noto Sans CJK SC, Noto Color Emoji, HanaMinB, BabelStone Han");
+    pango_font_description_set_size(font, link_settings.font_size * PANGO_SCALE);
     pango_layout_set_font_description(layout, font);
     pango_font_description_free(font);
     pango_layout_set_single_paragraph_mode(layout, TRUE);
     return layout;
+}
+
+static int item_height(void)
+{
+    return ITEM_HEIGHT + 2 * (link_settings.font_size - LINK_DEFAULT_FONT_SIZE);
 }
 
 static int measure(PangoLayout *layout, const char *text)
@@ -68,7 +74,7 @@ void panel_size(const char *const *candidates, int count, bool status, int *widt
     cairo_t *cr = cairo_create(surface);
     PangoLayout *layout = new_layout(cr);
     *width = 2 * (MARGIN + INSET) + (status ? 0 : END_PAD);
-    *height = ITEM_HEIGHT + 2 * (MARGIN + INSET);
+    *height = item_height() + 2 * (MARGIN + INSET);
     for (int i = 0; i < count; ++i) {
         char number[16];
         g_snprintf(number, sizeof number, "%d.", i + 1);
@@ -85,7 +91,7 @@ static void label(cairo_t *cr, PangoLayout *layout, const char *text, int x, int
     int height;
     pango_layout_set_text(layout, text, -1);
     pango_layout_get_pixel_size(layout, NULL, &height);
-    cairo_move_to(cr, x, y + (ITEM_HEIGHT - height) / 2.0);
+    cairo_move_to(cr, x, y + (item_height() - height) / 2.0);
     pango_cairo_show_layout(cr, layout);
 }
 

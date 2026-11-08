@@ -6,6 +6,7 @@
 #include <cairo.h>
 
 #define LINK_MAX_CANDIDATES 9
+#define LINK_DEFAULT_FONT_SIZE 14
 
 typedef enum { LINK_ZH, LINK_EN, LINK_JA } LinkLanguage;
 typedef enum { LINK_SYSTEM, LINK_LIGHT, LINK_DARK } LinkTheme;
@@ -15,7 +16,7 @@ typedef struct {
 typedef struct {
     LinkLanguage language;
     bool double_pinyin, japanese;
-    int candidates;
+    int candidates, font_size;
     LinkTheme theme;
     LinkPalette light, dark;
 } LinkSettings;

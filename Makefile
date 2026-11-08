@@ -20,7 +20,7 @@ build/%.h: protocol/%.xml | build
 build/%.c: protocol/%.xml | build
 	wayland-scanner private-code $< $@
 
-build/qingyin: main.c panel.c panel.h emoji.h theme.c theme.h input-mode.h japanese.c japanese.h settings.c settings.h $(HEADERS) $(SOURCES)
+build/qingyin: main.c panel.c panel.h emoji.h pinyin-phrases.h pinyin-correction.h pinyin-fuzzy.h theme.c theme.h input-mode.h japanese.c japanese.h settings.c settings.h $(HEADERS) $(SOURCES)
 	$(CC) $(CPPFLAGS) $(CFLAGS) $(LDFLAGS) -o $@ main.c panel.c theme.c japanese.c settings.c $(SOURCES) $(LDLIBS) -ldl
 
 clean:
@@ -43,7 +43,7 @@ IBUS_CFLAGS ?= $(shell pkg-config --cflags ibus-1.0)
 IBUS_LIBS ?= $(shell pkg-config --libs ibus-1.0)
 
 X11_PANEL_PKGS = cairo-xlib x11 xext
-build/qingyin-ibus: ibus.c x11-panel.c x11-panel.h panel.c panel.h emoji.h theme.c theme.h input-mode.h japanese.c japanese.h settings.c settings.h | build
+build/qingyin-ibus: ibus.c x11-panel.c x11-panel.h panel.c panel.h emoji.h pinyin-phrases.h pinyin-correction.h pinyin-fuzzy.h theme.c theme.h input-mode.h japanese.c japanese.h settings.c settings.h | build
 	$(CC) $(CPPFLAGS) $(IBUS_CFLAGS) $(shell pkg-config --cflags $(X11_PANEL_PKGS)) $(CFLAGS) $(LDFLAGS) -o $@ ibus.c x11-panel.c panel.c theme.c japanese.c settings.c $(LDLIBS) -ldl $(IBUS_LIBS) $(shell pkg-config --libs $(X11_PANEL_PKGS))
 
 PREFIX ?= $(HOME)/.local

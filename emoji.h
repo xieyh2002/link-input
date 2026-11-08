@@ -1,7 +1,12 @@
 #ifndef QINGYIN_EMOJI_H
 #define QINGYIN_EMOJI_H
 #include <glib.h>
+#include <glib/gstdio.h>
+#include <errno.h>
 #include <string.h>
+#include "pinyin-phrases.h"
+#include "pinyin-correction.h"
+#include "pinyin-fuzzy.h"
 
 static inline gboolean emoji_write(const char *path, const char *contents,
                                    gboolean *changed, GError **error)
@@ -12,6 +17,42 @@ static inline gboolean emoji_write(const char *path, const char *contents,
     if (!g_file_set_contents(path, contents, -1, error)) return FALSE;
     *changed = TRUE;
     return TRUE;
+}
+
+static inline gboolean schema_invalidate(const char *data, const char *schema, GError **error)
+{
+    /* Rime compares source timestamps at one-second resolution. */
+    g_autofree char *name = g_strconcat(schema, ".schema.yaml", NULL);
+    g_autofree char *path = g_build_filename(data, "build", name, NULL);
+    if (g_unlink(path) == 0 || errno == ENOENT) return TRUE;
+    int saved = errno;
+    g_set_error(error, G_FILE_ERROR, g_file_error_from_errno(saved),
+                "无法刷新 Rime 方案缓存：%s", g_strerror(saved));
+    return FALSE;
+}
+
+static inline gboolean pinyin_prepare_algebra(const char *data, gboolean *changed, GError **error)
+{
+    g_autofree char *settings = g_build_filename(g_get_user_config_dir(), "link-input", "pinyin.ini", NULL);
+    g_autoptr(GKeyFile) file = g_key_file_new();
+    g_key_file_load_from_file(file, settings, G_KEY_FILE_NONE, NULL);
+    gboolean correction = g_key_file_get_boolean(file, "Pinyin", "correction", NULL);
+    g_autofree char *fuzzy = g_key_file_get_string(file, "Pinyin", "fuzzy", NULL);
+    /* Keep the stock Luna abbreviations and alternate spellings. */
+    g_autoptr(GString) algebra = g_string_new(
+        "algebra:\n"
+        "    - erase/^xx$/\n"
+        "    - abbrev/^([a-z]).+$/$1/\n"
+        "    - abbrev/^([zcs]h).+$/$1/\n"
+        "    - derive/^([nl])ve$/$1ue/\n"
+        "    - derive/^([jqxy])u/$1v/\n"
+        "    - derive/un$/uen/\n"
+        "    - derive/ui$/uei/\n"
+        "    - derive/iu$/iou/\n");
+    pinyin_append_fuzzy(algebra, fuzzy);
+    pinyin_append_correction(algebra, correction);
+    g_autofree char *path = g_build_filename(data, "link_pinyin_algebra.yaml", NULL);
+    return emoji_write(path, algebra->str, changed, error);
 }
 
 static inline gboolean emoji_prepare(const char *data, const char *schema,
@@ -28,12 +69,28 @@ static inline gboolean emoji_prepare(const char *data, const char *schema,
         "    option_name: qingyin_emoji\n"
         "    opencc_config: qingyin-emoji.json\n";
     g_autofree char *ice_dict = g_build_filename(data, "link_ice.dict.yaml", NULL);
-    g_autofree char *ice_patch = g_strconcat(patch,
+    const char *ice =
         "  translator/dictionary: link_ice\n"
-        "  translator/user_dict: luna_pinyin\n", NULL);
+        "  translator/user_dict: luna_pinyin\n";
+    g_autofree char *ice_patch = g_strconcat(patch, ice, NULL);
+    gboolean full = !strcmp(schema, "luna_pinyin_simp");
+    g_autoptr(GString) pinyin_patch = g_string_new(patch);
+    pinyin_append_phrases(pinyin_patch, schema);
+    if (full)
+        g_string_append(pinyin_patch,
+            "  speller/algebra:\n"
+            "    __include: link_pinyin_algebra:/algebra\n");
+    g_autofree char *pinyin_ice_patch = g_strconcat(pinyin_patch->str, ice, NULL);
+    gboolean schema_changed = FALSE;
+    if (full && !pinyin_prepare_algebra(data, &schema_changed, error)) return FALSE;
+    if (schema_changed) {
+        *changed = TRUE;
+        if (!schema_invalidate(data, schema, error)) return FALSE;
+    }
     g_autofree char *existing = NULL;
     if (g_file_get_contents(custom, &existing, NULL, NULL) &&
-        strcmp(existing, patch) && strcmp(existing, ice_patch))
+        strcmp(existing, patch) && strcmp(existing, ice_patch) &&
+        strcmp(existing, pinyin_patch->str) && strcmp(existing, pinyin_ice_patch))
         return TRUE; /* Preserve user-managed Rime schema overrides. */
 
     g_autofree char *dir = g_build_filename(data, "opencc", NULL);
@@ -80,9 +137,16 @@ static inline gboolean emoji_prepare(const char *data, const char *schema,
         "彩虹\t彩虹 🌈\n"
         "闪电\t闪电 ⚡\n"
         "火焰\t火焰 🔥\n";
-    return emoji_write(dict, entries, changed, error) &&
-           emoji_write(config, json, changed, error) &&
-           emoji_write(custom, g_file_test(ice_dict, G_FILE_TEST_IS_REGULAR) ? ice_patch : patch,
-                       changed, error);
+    gboolean patch_changed = FALSE;
+    if (!emoji_write(dict, entries, changed, error) ||
+        !emoji_write(config, json, changed, error) ||
+        !emoji_write(custom, g_file_test(ice_dict, G_FILE_TEST_IS_REGULAR) ? pinyin_ice_patch : pinyin_patch->str,
+                     &patch_changed, error))
+        return FALSE;
+    if (patch_changed) {
+        *changed = TRUE;
+        if (!schema_changed && !schema_invalidate(data, schema, error)) return FALSE;
+    }
+    return TRUE;
 }
 #endif

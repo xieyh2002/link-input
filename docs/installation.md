@@ -14,14 +14,14 @@ bash demo/start.sh
 Fedora 44（x86_64）：
 
 ```sh
-sudo dnf install ./link-input-0.1.1-1.fc44.x86_64.rpm
+sudo dnf install ./link-input-0.2.0-1.fc44.x86_64.rpm
 systemctl --user daemon-reload
 ```
 
 Debian 13（amd64）：
 
 ```sh
-sudo apt install ./link-input_0.1.1_amd64.deb
+sudo apt install ./link-input_0.2.0_amd64.deb
 systemctl --user daemon-reload
 ```
 
@@ -35,7 +35,7 @@ systemctl --user daemon-reload
 sudo apt install build-essential pkg-config libwayland-dev libxkbcommon-dev \
   libcairo2-dev libpango1.0-dev libglib2.0-dev librime-dev libibus-1.0-dev \
   libx11-dev libxext-dev
-bash packaging/deb/build.sh 0.1.1
+bash packaging/deb/build.sh 0.2.0
 ```
 
 生成的安装包位于 `dist/`。
@@ -99,6 +99,29 @@ spawn-at-startup "systemctl" "--user" "start" "qingyin-ibus.service"
 雾凇词库支持从 v0.1.1 起提供。装好 Git 后，运行 `link --install-rime-ice`（系统级安装使用 `link-input --install-rime-ice`），再打开设置点「保存并应用」。程序从 [雾凇拼音 GitHub 仓库](https://github.com/iDvel/rime-ice) 下载固定版本的中文词库；全拼和小鹤双拼共用词库，保留已有的 Rime 用户学习数据。首次编译可能需要一段时间。Link 不会替换用户自行维护的 Rime 方案补丁。
 
 运行 `link --disable-rime-ice`（或 `link-input --disable-rime-ice`）并重新应用设置，可恢复朙月拼音词库。已下载的词库会保留，方便再次启用。
+
+## 拼音设置
+
+打开 Link 设置，在「拼音」中可以编辑自定义短语、切换全拼自动纠错，并勾选需要的模糊音。点击「保存并应用」后生效。
+
+**自定义短语**：每行先写短语，再用一个 Tab 分隔输入码。全拼和小鹤双拼都直接匹配键入的字母，完整匹配时优先显示短语。Wayland 和 IBus 共用一份短语；首次保存时会合并两边已有的条目。例如，以下两行分别为全拼和小鹤双拼的「项目地址」设置输入码：
+
+```text
+项目地址	xiangmudizhi
+项目地址	xlmudivi
+```
+
+**自动纠错和模糊音**只适用于默认全拼，且默认关闭。也可手动编辑 `${XDG_CONFIG_HOME:-~/.config}/link-input/pinyin.ini`：
+
+```ini
+[Pinyin]
+correction=true
+fuzzy=zh/z,en/eng
+```
+
+纠错会为常见字母错序补充候选（例如 `yign` 可找到 `ying` 的候选），候选仍需手动确认。模糊音按组双向匹配，可用逗号选择 `zh/z`、`ch/c`、`sh/s`、`n/l`、`en/eng`、`in/ing`；开启后，Rime 的首选词可能变化。用 `correction=false` 或清空对应的 `fuzzy` 值即可关闭。
+
+改完后，在 Link 设置中点击「保存并应用」以重新加载输入法。若某套方案已有自行维护的 `*.custom.yaml`，Link 会保留该补丁，该方案的实验配置需自行合并。
 
 ## 数据位置
 

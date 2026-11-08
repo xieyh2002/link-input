@@ -2,7 +2,7 @@
 #include <glib.h>
 #include <string.h>
 
-#define DEFAULT_SETTINGS { .language = LINK_ZH, .japanese = true, .candidates = 7, .theme = LINK_SYSTEM, \
+#define DEFAULT_SETTINGS { .language = LINK_ZH, .japanese = true, .candidates = 7, .font_size = LINK_DEFAULT_FONT_SIZE, .theme = LINK_SYSTEM, \
     .light = {0xffffff, 0x1c293b, 0x007aff, 0xd1d1d1}, .dark = {0x1f2126, 0xf0f2f7, 0x007aff, 0x4d525e} }
 
 LinkSettings link_settings = DEFAULT_SETTINGS;
@@ -42,6 +42,8 @@ void link_settings_load(void)
     if (!error) link_settings.japanese = jp;
     int count = g_key_file_get_integer(file, "Input", "candidates", NULL);
     if (count >= 1 && count <= LINK_MAX_CANDIDATES) link_settings.candidates = count;
+    int font_size = g_key_file_get_integer(file, "Appearance", "font_size", NULL);
+    if (font_size >= 10 && font_size <= 28) link_settings.font_size = font_size;
     if (!g_strcmp0(language, "en")) link_settings.language = LINK_EN;
     if (!g_strcmp0(language, "ja") && link_settings.japanese) link_settings.language = LINK_JA;
     link_settings.double_pinyin = !g_strcmp0(chinese, "double");
