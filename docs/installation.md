@@ -85,6 +85,7 @@ spawn-at-startup "systemctl" "--user" "start" "qingyin-ibus.service"
 - 原生 Wayland 应用使用输入法协议。同一个 Wayland 席位只允许运行一个输入法，请停止会抢占该席位的其他输入法及其 niri 自启动项。
 - IBus 兼容服务使用系统的 IBus 守护进程传递 Qt/XIM 输入。服务会尝试选择 link 输入法作为 IBus 当前引擎。若已经有 IBus 守护进程，它会复用；此时 XIM 是否可用取决于已有守护进程是否以 XIM 支持启动。
 - XWayland GTK 应用若没有自动选择 IBus，可以用 `GTK_IM_MODULE=ibus` 单独启动该应用。原生 Wayland GTK 一般应保留原生输入路径，避免全局设置 `GTK_IM_MODULE=ibus`。
+- 若使用 DMS（Dux Shell）的 Spotlight 启动器，在其用户服务单独取消 `QT_IM_MODULE`（`systemctl --user edit dms.service`，添加 `[Service]` 和 `UnsetEnvironment=QT_IM_MODULE`），再重启 `dms.service`。DMS 可走原生 Wayland，由 niri 将候选栏定位到启动器的光标旁；其他 Qt 应用仍可用 IBus。
 - 检查并重新登录 niri，使应用读取新的输入法环境变量。已运行的应用需要重开。
 
 ## 更新和恢复
@@ -92,6 +93,12 @@ spawn-at-startup "systemctl" "--user" "start" "qingyin-ibus.service"
 更新源码后重新运行 `make install`。当前会话可打开 `link`，点「保存并应用」，以重新连接两个输入接口。
 
 若要恢复原输入法，先移除上面的 niri 启动项和环境变量改动，再恢复原来的输入法自启动并重新登录。用户设置和本地 Rime 词库不会被源码安装覆盖。
+
+## 加装雾凇词库
+
+雾凇词库支持需要安装当前源码版本（v0.1.0 安装包尚未包含此功能）。装好 Git 后，运行 `link --install-rime-ice`（系统级安装使用 `link-input --install-rime-ice`），再打开设置点「保存并应用」。程序从 [雾凇拼音 GitHub 仓库](https://github.com/iDvel/rime-ice) 下载固定版本的中文词库；全拼和小鹤双拼共用词库，保留已有的 Rime 用户学习数据。首次编译可能需要一段时间。Link 不会替换用户自行维护的 Rime 方案补丁。
+
+运行 `link --disable-rime-ice`（或 `link-input --disable-rime-ice`）并重新应用设置，可恢复朙月拼音词库。已下载的词库会保留，方便再次启用。
 
 ## 数据位置
 

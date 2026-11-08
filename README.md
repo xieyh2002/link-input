@@ -36,6 +36,8 @@
 
 中文由 [librime](https://github.com/rime/librime) 转换，默认从系统的 `/usr/share/rime-data` 读取方案和词库。英文直接输入，无需词库；常用 emoji 联想使用 Link 自带的映射。仓库不附带系统词库。
 
+全拼和小鹤双拼也可以加装 [雾凇拼音词库](https://github.com/iDvel/rime-ice)，并保留朙月拼音作为补充。见[雾凇词库安装说明](docs/installation.md#加装雾凇词库)。
+
 ## 设置
 
 安装后在应用菜单打开「link输入法设置」，也可以从终端启动：源码默认安装使用 `link`，Debian 和 Fedora 安装包使用 `link-input`。

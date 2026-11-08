@@ -27,8 +27,13 @@ static inline gboolean emoji_prepare(const char *data, const char *schema,
         "  qingyin_emoji:\n"
         "    option_name: qingyin_emoji\n"
         "    opencc_config: qingyin-emoji.json\n";
+    g_autofree char *ice_dict = g_build_filename(data, "link_ice.dict.yaml", NULL);
+    g_autofree char *ice_patch = g_strconcat(patch,
+        "  translator/dictionary: link_ice\n"
+        "  translator/user_dict: luna_pinyin\n", NULL);
     g_autofree char *existing = NULL;
-    if (g_file_get_contents(custom, &existing, NULL, NULL) && strcmp(existing, patch))
+    if (g_file_get_contents(custom, &existing, NULL, NULL) &&
+        strcmp(existing, patch) && strcmp(existing, ice_patch))
         return TRUE; /* Preserve user-managed Rime schema overrides. */
 
     g_autofree char *dir = g_build_filename(data, "opencc", NULL);
@@ -77,6 +82,7 @@ static inline gboolean emoji_prepare(const char *data, const char *schema,
         "火焰\t火焰 🔥\n";
     return emoji_write(dict, entries, changed, error) &&
            emoji_write(config, json, changed, error) &&
-           emoji_write(custom, patch, changed, error);
+           emoji_write(custom, g_file_test(ice_dict, G_FILE_TEST_IS_REGULAR) ? ice_patch : patch,
+                       changed, error);
 }
 #endif

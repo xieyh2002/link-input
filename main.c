@@ -58,7 +58,9 @@ struct app {
     RimeApi *rime;
     RimeSessionId session;
     InputState input;
-    guint status_timer;
+    guint status_timer, panel_wait;
+    int32_t caret[4];
+    bool caret_known;
     const char *status;
     uint32_t serial, hint, purpose;
     int scale;
@@ -102,7 +104,7 @@ static bool engine_start(struct app *a) {
     a->rime->initialize(&traits);
     if (a->rime->start_maintenance(needs_deploy || emoji_changed))
         a->rime->join_maintenance_thread();
-    input_deploy_double(a->rime, traits.shared_data_dir, path, double_changed || needs_deploy);
+    input_deploy_double(a->rime, traits.shared_data_dir, path, double_changed || needs_deploy || emoji_changed);
     a->session = a->rime->create_session();
     if (!a->session || !input_select_rime(a->rime, a->session, schema)) {
         fprintf(stderr, "无法加载 Rime 方案：%s\n", schema);
@@ -172,6 +174,7 @@ static void clear_status(struct app *a) {
 
 static void hide(struct app *a) {
     clear_status(a);
+    g_clear_handle_id(&a->panel_wait, g_source_remove);
     panel_content_clear(&a->panel);
     a->panel_pending = false;
     if (a->panel_frame) {
@@ -186,7 +189,7 @@ static void hide(struct app *a) {
 
 static void draw_panel(struct app *a) {
     /* Keep only the latest content while waiting for the compositor. */
-    if (!a->panel_pending || a->panel_frame || !a->active) return;
+    if (!a->panel_pending || a->panel_frame || a->panel_wait || !a->active) return;
     PanelContent *p = &a->panel;
     bool has_free_slot = false;
     for (unsigned i = 0; i < G_N_ELEMENTS(a->panel_buffers); i++)
@@ -217,8 +220,21 @@ static void draw_panel(struct app *a) {
     a->visible = true;
 }
 
+static gboolean finish_panel_wait(gpointer data) {
+    struct app *a = data;
+    a->panel_wait = 0;
+    draw_panel(a);
+    return G_SOURCE_REMOVE;
+}
+
 static void paint(struct app *a, const char *const *choices, int count, int selected) {
     if (!count || !a->active) { hide(a); return; }
+    if (selected == PANEL_STATUS) {
+        g_clear_handle_id(&a->panel_wait, g_source_remove);
+    } else if (!a->visible && !a->panel_pending) {
+        /* The client may send its new caret only after it receives the preedit. */
+        a->panel_wait = g_timeout_add(24, finish_panel_wait, a);
+    }
     if (panel_content_update(&a->panel, choices, count, selected, a->scale, a->theme.dark))
         a->panel_pending = true;
     draw_panel(a);
@@ -469,6 +485,7 @@ static void done(void *data, struct zwp_input_method_v2 *im) {
     a->active = a->next_active;
     if (a->reset || (a->hint & HINT_SENSITIVE) ||
         a->purpose == PURPOSE_PASSWORD || a->purpose == PURPOSE_PIN) {
+        a->caret_known = false;
         a->repeat_code = a->tap_shift = -1;
         input_clear(&a->input, a->rime, a->session);
         if (a->visible && a->active) publish(a);
@@ -487,7 +504,17 @@ static const struct zwp_input_method_v2_listener im_listener = {
 };
 
 static void rect(void *data, struct zwp_input_popup_surface_v2 *popup,
-                 int32_t x, int32_t y, int32_t w, int32_t h) {}
+                 int32_t x, int32_t y, int32_t w, int32_t h) {
+    struct app *a = data;
+    const int32_t next[] = {x, y, w, h};
+    if (a->caret_known && !memcmp(a->caret, next, sizeof next)) return;
+    memcpy(a->caret, next, sizeof next);
+    a->caret_known = true;
+    if (a->panel_wait && h > 0) {
+        g_clear_handle_id(&a->panel_wait, g_source_remove);
+        draw_panel(a);
+    }
+}
 static const struct zwp_input_popup_surface_v2_listener popup_listener = {rect};
 
 static void global(void *data, struct wl_registry *reg, uint32_t id,
@@ -607,6 +634,7 @@ int main(int argc, char **argv) {
     struct app a = {.scale = 1, .repeat_code = -1, .tap_shift = -1};
     int result = engine_start(&a) ? (check ? engine_check(&a) : run(&a)) : 1;
     clear_status(&a);
+    g_clear_handle_id(&a.panel_wait, g_source_remove);
     theme_stop(&a.theme);
     if (a.input.jp) japanese_free(a.input.jp);
     panel_content_clear(&a.panel);

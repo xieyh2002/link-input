@@ -26,7 +26,8 @@ bin_dir=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 engine_pid=$!
 for ((i=0; i<600; i++)); do
     kill -0 "$engine_pid" 2>/dev/null || exit 1
-    if ibus engine qingyin >/dev/null 2>&1; then
+    if [[ $(ibus engine 2>/dev/null || true) == qingyin ]] ||
+       ibus engine qingyin >/dev/null 2>&1; then
         systemctl --user set-environment QT_IM_MODULE=ibus XMODIFIERS=@im=ibus
         wait "$engine_pid" || true
         exit 1

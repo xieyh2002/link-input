@@ -199,6 +199,11 @@ static void content_type(IBusEngine *engine, guint purpose, guint hints)
     if (e->sensitive) reset(engine);
 }
 
+static void cursor_location(IBusEngine *engine, gint x, gint y, gint w, gint h)
+{
+    if (visible_engine == (QingyinEngine *)engine) x11_panel_move(x, y, h);
+}
+
 static void candidate_clicked(IBusEngine *engine, guint index, guint button, guint state)
 {
     QingyinEngine *e = (QingyinEngine *)engine;
@@ -244,6 +249,7 @@ static void qingyin_engine_class_init(QingyinEngineClass *klass)
     klass->focus_in_id = focus_in_id;
     klass->focus_out_id = focus_out_id;
     klass->set_content_type = content_type;
+    klass->set_cursor_location = cursor_location;
     klass->candidate_clicked = candidate_clicked;
     IBUS_OBJECT_CLASS(klass)->destroy = destroy;
 }

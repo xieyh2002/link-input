@@ -36,7 +36,7 @@ static gboolean open_panel(void)
     return TRUE;
 }
 
-static void position_panel(int x, int y, int caret_height, int w, int h)
+static bool position_panel(int x, int y, int caret_height, int w, int h)
 {
     int screen_w = DisplayWidth(display, screen), screen_h = DisplayHeight(display, screen);
     int next_left = CLAMP(x, 0, MAX(0, screen_w - w));
@@ -47,11 +47,18 @@ static void position_panel(int x, int y, int caret_height, int w, int h)
         XMoveResizeWindow(display, window, next_left, next_top, w, h);
     else if (left != next_left || top != next_top)
         XMoveWindow(display, window, next_left, next_top);
-    else return;
+    else return false;
     width = w;
     height = h;
     left = next_left;
     top = next_top;
+    return true;
+}
+
+void x11_panel_move(int x, int y, int caret_height)
+{
+    if (mapped && position_panel(x, y, caret_height, width, height))
+        XFlush(display);
 }
 
 void x11_panel_show(int x, int y, int caret_height, const char *const *items, int count, int selected, bool dark)

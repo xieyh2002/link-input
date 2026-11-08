@@ -1,0 +1,79 @@
+#!/bin/bash
+set -euo pipefail
+umask 077
+
+root=${XDG_DATA_HOME:-$HOME/.local/share}/qingyin
+assets="$root/link-rime-ice"
+snapshot=99662ba01e3affa6a0f009174ca530b887bac3b6
+paths=("$root/rime" "$root/rime-ibus")
+mode=${1:-}
+
+if [[ $mode != --install-rime-ice && $mode != --disable-rime-ice ]]; then
+    printf '%s\n' '用法：link --install-rime-ice 或 link --disable-rime-ice' >&2
+    exit 2
+fi
+mkdir -p "$root"
+exec 9>"$root/link-rime-ice.lock"
+flock 9
+
+if [[ $mode == --install-rime-ice ]]; then
+    for path in "${paths[@]}"; do
+        mkdir -p "$path"
+        for name in link_ice.dict.yaml link_ice_cn; do
+            target="$assets/$snapshot/$name"
+            item="$path/$name"
+            if [[ -e $item || -L $item ]] && [[ $(readlink -- "$item" || true) != "$target" ]]; then
+                printf '保留已有文件：%s\n' "$item" >&2
+                exit 1
+            fi
+        done
+    done
+    if [[ ! -f $assets/$snapshot/link_ice.dict.yaml ]]; then
+        if ! command -v git >/dev/null; then
+            printf '%s\n' '下载雾凇词库需要 Git。' >&2
+            exit 1
+        fi
+        mkdir -p "$assets"
+        work=$(mktemp -d "$assets/.download.XXXXXX")
+        trap 'rm -rf -- "$work"' EXIT
+        git init -q "$work/upstream"
+        git -C "$work/upstream" fetch -q --depth 1 https://github.com/iDvel/rime-ice.git "$snapshot"
+        git -C "$work/upstream" checkout -q --detach FETCH_HEAD
+        mkdir -p "$work/files/link_ice_cn"
+        for dict in 8105 base ext tencent others; do
+            install -m644 "$work/upstream/cn_dicts/$dict.dict.yaml" "$work/files/link_ice_cn/"
+        done
+        if [[ -f $work/upstream/LICENSE ]]; then
+            install -m644 "$work/upstream/LICENSE" "$work/files/"
+        fi
+        cat > "$work/files/link_ice.dict.yaml" <<'DICT'
+---
+name: link_ice
+version: "99662ba"
+import_tables:
+  - link_ice_cn/8105
+  - link_ice_cn/base
+  - link_ice_cn/ext
+  - link_ice_cn/tencent
+  - link_ice_cn/others
+  - luna_pinyin
+...
+DICT
+        mv -T -- "$work/files" "$assets/$snapshot"
+    fi
+    for path in "${paths[@]}"; do
+        for name in link_ice_cn link_ice.dict.yaml; do
+            item="$path/$name"
+            if [[ ! -L $item ]]; then ln -s -- "$assets/$snapshot/$name" "$item"; fi
+        done
+    done
+    printf '%s\n' '雾凇词库已安装。重新加载 Link 后生效，首次编译需要一些时间。'
+else
+    for path in "${paths[@]}"; do
+        for name in link_ice.dict.yaml link_ice_cn; do
+            item="$path/$name"
+            if [[ $(readlink -- "$item" || true) == "$assets/$snapshot/$name" ]]; then rm -- "$item"; fi
+        done
+    done
+    printf '%s\n' '雾凇词库已停用。重新加载 Link 后恢复朙月拼音词库。'
+fi

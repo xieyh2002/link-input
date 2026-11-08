@@ -49,10 +49,11 @@ build/qingyin-ibus: ibus.c x11-panel.c x11-panel.h panel.c panel.h emoji.h theme
 PREFIX ?= $(HOME)/.local
 SYSTEMD_USER_DIR ?= $(HOME)/.config/systemd/user
 SETTINGS_COMMAND ?= $(if $(filter /usr,$(PREFIX)),link-input,link)
-install-settings: integration/link integration/link-settings.py integration/link-input-apply integration/io.github.qingyin.LinkSettings.desktop assets/icon.svg
+install-settings: integration/link integration/link-settings.py integration/link-input-apply integration/link-rime-ice integration/io.github.qingyin.LinkSettings.desktop assets/icon.svg
 	install -Dm755 integration/link "$(DESTDIR)$(PREFIX)/bin/$(SETTINGS_COMMAND)"
 	install -Dm644 integration/link-settings.py "$(DESTDIR)$(PREFIX)/libexec/link-input/link-settings.py"
 	install -Dm755 integration/link-input-apply "$(DESTDIR)$(PREFIX)/libexec/link-input/link-input-apply"
+	install -Dm755 integration/link-rime-ice "$(DESTDIR)$(PREFIX)/libexec/link-input/link-rime-ice"
 
 	install -Dm644 assets/icon.svg "$(DESTDIR)$(PREFIX)/share/icons/hicolor/scalable/apps/link-input.svg"
 	install -Dm644 integration/io.github.qingyin.LinkSettings.desktop "$(DESTDIR)$(PREFIX)/share/applications/io.github.qingyin.LinkSettings.desktop"

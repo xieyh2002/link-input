@@ -22,7 +22,11 @@ while read -r pid; do
 done < <(pgrep -u "$UID" -x qingyin || true)
 started_at=$(date '+%Y-%m-%d %H:%M:%S.%6N')
 niri msg action spawn -- /usr/bin/systemd-cat -t qingyin-wayland "$native"
-for ((i=0; i<200; i++)); do
+attempts=200
+if [[ -f ${XDG_DATA_HOME:-$HOME/.local/share}/qingyin/rime/link_ice.dict.yaml ]]; then
+    attempts=600
+fi
+for ((i=0; i<attempts; i++)); do
     if [[ "$(ibus engine 2>/dev/null || true)" == qingyin ]] &&
        journalctl --user -t qingyin-wayland --since "$started_at" -o cat --no-pager |
            grep -F 'link输入法已连接 Wayland' >/dev/null; then
