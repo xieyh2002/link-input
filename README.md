@@ -1,8 +1,19 @@
 <div align="center">
   <img src="assets/banner.svg" alt="Link Input — Linux / Wayland" width="900" />
   <h1>link输入法</h1>
-  <p>为 niri 做的轻量输入法。全拼、双拼、英文和日文，共用一套候选栏和设置。</p>
-  <p><a href="https://github.com/xieyh2002/link-input/releases">下载安装包</a> · <a href="#快速试用">快速试用</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#词库来源">词库来源</a> · <a href="#应用兼容">兼容性</a></p>
+  <p><strong>为 niri 做的轻量输入法。</strong><br />全拼、小鹤双拼、英文和日文，共用一套候选栏和设置。</p>
+  <p>
+    <a href="https://github.com/xieyh2002/link-input/releases/latest"><img alt="最新版本" src="https://img.shields.io/github/v/release/xieyh2002/link-input?logo=github&amp;color=007aff" /></a>
+    <a href="https://github.com/xieyh2002/link-input/releases"><img alt="累计下载量" src="https://img.shields.io/github/downloads/xieyh2002/link-input/total?color=269864" /></a>
+    <a href="https://github.com/xieyh2002/link-input/stargazers"><img alt="GitHub Stars" src="https://img.shields.io/github/stars/xieyh2002/link-input?color=ad7b15" /></a>
+  </p>
+  <p>
+    <a href="#安装包"><img alt="Linux 安装包：x86_64" src="https://img.shields.io/badge/Linux-x86__64-007aff?logo=linux&amp;logoColor=white" /></a>
+    <a href="#安装包"><img alt="安装包：RPM 和 DEB" src="https://img.shields.io/badge/packages-RPM%20%7C%20DEB-008890" /></a>
+    <a href="#应用兼容"><img alt="桌面协议：Wayland 和 IBus" src="https://img.shields.io/badge/input-Wayland%20%7C%20IBus-6954ba" /></a>
+    <a href="#词库来源"><img alt="中文输入引擎：Rime" src="https://img.shields.io/badge/engine-Rime-4279ba" /></a>
+  </p>
+  <p><strong><a href="https://github.com/xieyh2002/link-input/releases/latest">下载最新版</a> · <a href="#候选栏">功能</a> · <a href="docs/installation.md">安装指南</a> · <a href="#输入模式与快捷键">快捷键</a> · <a href="#词库来源">词库</a> · <a href="https://github.com/xieyh2002/link-input/releases">更新日志</a></strong></p>
 </div>
 
 ## 候选栏
