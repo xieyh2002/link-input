@@ -18,6 +18,7 @@ typedef struct {
     bool double_pinyin, japanese;
     int candidates, font_size;
     LinkTheme theme;
+    bool standard_spacing;
     LinkPalette light, dark;
 } LinkSettings;
 

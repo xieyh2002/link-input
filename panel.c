@@ -7,8 +7,8 @@
 #include <string.h>
 
 enum {
-    MARGIN = 2, INSET = 4, ITEM_HEIGHT = 31, ITEM_GAP = 2,
-    ITEM_PAD = 8, END_PAD = 8, NUMBER_GAP = 3,
+    MARGIN = 2, ITEM_HEIGHT = 31, ITEM_GAP = 2,
+    NUMBER_GAP = 3,
 };
 
 bool panel_content_update(PanelContent *content, const char *const *items,
@@ -74,12 +74,14 @@ void panel_size(const char *const *candidates, int count, bool status, int *widt
     cairo_surface_t *surface = cairo_image_surface_create(CAIRO_FORMAT_ARGB32, 1, 1);
     cairo_t *cr = cairo_create(surface);
     PangoLayout *layout = new_layout(cr);
-    *width = 2 * (MARGIN + INSET) + (status ? 0 : END_PAD);
-    *height = item_height() + 2 * (MARGIN + INSET);
+    int inset = link_settings.standard_spacing ? 4 : 2;
+    int item_pad = link_settings.standard_spacing ? 8 : 6;
+    *width = 2 * (MARGIN + inset) + (status ? 0 : item_pad);
+    *height = item_height() + 2 * (MARGIN + inset);
     for (int i = 0; i < count; ++i) {
         char number[16];
         g_snprintf(number, sizeof number, "%d.", i + 1);
-        *width += (i ? ITEM_GAP : 0) + 2 * ITEM_PAD + (status ? 0 : measure(layout, number) + NUMBER_GAP)
+        *width += (i ? ITEM_GAP : 0) + 2 * item_pad + (status ? 0 : measure(layout, number) + NUMBER_GAP)
                   + measure(layout, candidates[i]);
     }
     g_object_unref(layout);
@@ -113,13 +115,15 @@ void panel_draw(unsigned char *pixels, int width, int height, int stride,
     cairo_fill(cr);
 
     PangoLayout *layout = new_layout(cr);
-    int x = MARGIN + INSET, y = MARGIN + INSET;
+    int inset = link_settings.standard_spacing ? 4 : 2;
+    int item_pad = link_settings.standard_spacing ? 8 : 6;
+    int x = MARGIN + inset, y = MARGIN + inset;
     for (int i = 0; i < count; ++i) {
         int text_width = measure(layout, candidates[i]);
         char number[16];
         g_snprintf(number, sizeof number, "%d.", i + 1);
         int number_width = selected == PANEL_STATUS ? 0 : measure(layout, number) + NUMBER_GAP;
-        int item_width = 2 * ITEM_PAD + number_width + text_width;
+        int item_width = 2 * item_pad + number_width + text_width;
         if (i == selected) {
             int left = i == 0 ? MARGIN : x - ITEM_GAP / 2;
             int right = i == count - 1 ? width - MARGIN : x + item_width + ITEM_GAP / 2;
@@ -137,8 +141,8 @@ void panel_draw(unsigned char *pixels, int width, int height, int stride,
                               114 * (selection & 255);
         uint32_t highlight_text = brightness > 165000 ? 0x151923 : 0xffffff;
         link_color(cr, i == selected ? highlight_text : palette->text);
-        if (selected != PANEL_STATUS) label(cr, layout, number, x + ITEM_PAD, y);
-        label(cr, layout, candidates[i], x + ITEM_PAD + number_width, y);
+        if (selected != PANEL_STATUS) label(cr, layout, number, x + item_pad, y);
+        label(cr, layout, candidates[i], x + item_pad + number_width, y);
         x += item_width + ITEM_GAP;
     }
 

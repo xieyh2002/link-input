@@ -24,6 +24,7 @@ DEFAULTS = {
     "Appearance": {
         "theme": "system",
         "font_size": "14",
+        "spacing": "compact",
     },
     "Light": {
         "background": "#ffffff",
@@ -51,6 +52,7 @@ CHOICES = {
     "language": (("简体中文", "zh"), ("English", "en"), ("日本語", "ja")),
     "chinese": (("全拼", "full"), ("双拼", "double")),
     "theme": (("跟随系统", "system"), ("浅色", "light"), ("深色", "dark")),
+    "spacing": (("紧凑", "compact"), ("标准", "standard")),
 }
 VALUE_BY_LABEL = {
     key: {text: value for text, value in choices}
@@ -194,7 +196,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
         super().__init__(application=application, title="link输入法 设置", default_width=760, default_height=640)
         self.set_icon_name("link-input")
         self.settings = read_settings(CONFIG_PATH)
-        self.choice_buttons = {"language": [], "chinese": [], "theme": []}
+        self.choice_buttons = {"language": [], "chinese": [], "theme": [], "spacing": []}
         self.japanese_switch = None
         self.spinners = {}
         self.color_buttons = {"Light": {}, "Dark": {}}
@@ -225,6 +227,7 @@ class SettingsWindow(Gtk.ApplicationWindow):
 
         appearance_group = self.make_group("外观")
         self.make_choices(appearance_group, "主题", "theme")
+        self.make_choices(appearance_group, "候选栏间距", "spacing")
         self.make_spin(appearance_group, "候选栏字号（pt）", "Appearance", "font_size", 10, 28)
         content.append(appearance_group)
 

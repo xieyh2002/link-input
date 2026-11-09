@@ -14,14 +14,14 @@ bash demo/start.sh
 Fedora 44（x86_64）：
 
 ```sh
-sudo dnf install ./link-input-0.2.1-1.fc44.x86_64.rpm
+sudo dnf install ./link-input-0.2.2-1.fc44.x86_64.rpm
 systemctl --user daemon-reload
 ```
 
 Debian 13（amd64）：
 
 ```sh
-sudo apt install ./link-input_0.2.1_amd64.deb
+sudo apt install ./link-input_0.2.2_amd64.deb
 systemctl --user daemon-reload
 ```
 
@@ -35,7 +35,7 @@ systemctl --user daemon-reload
 sudo apt install build-essential pkg-config libwayland-dev libxkbcommon-dev \
   libcairo2-dev libpango1.0-dev libglib2.0-dev librime-dev libibus-1.0-dev \
   libx11-dev libxext-dev libxrender-dev
-bash packaging/deb/build.sh 0.2.1
+bash packaging/deb/build.sh 0.2.2
 ```
 
 生成的安装包位于 `dist/`。

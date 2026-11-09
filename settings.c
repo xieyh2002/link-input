@@ -37,6 +37,8 @@ void link_settings_load(void)
     g_autofree char *language = g_key_file_get_string(file, "Input", "language", NULL);
     g_autofree char *chinese = g_key_file_get_string(file, "Input", "chinese", NULL);
     g_autofree char *theme = g_key_file_get_string(file, "Appearance", "theme", NULL);
+    g_autofree char *spacing = g_key_file_get_string(file, "Appearance", "spacing", NULL);
+    link_settings.standard_spacing = !g_strcmp0(spacing, "standard");
     g_autoptr(GError) error = NULL;
     gboolean jp = g_key_file_get_boolean(file, "Input", "japanese", &error);
     if (!error) link_settings.japanese = jp;
