@@ -2,6 +2,7 @@
 #include "settings.h"
 
 #include <cairo.h>
+#include <math.h>
 #include <pango/pangocairo.h>
 #include <string.h>
 
@@ -96,10 +97,10 @@ static void label(cairo_t *cr, PangoLayout *layout, const char *text, int x, int
 }
 
 void panel_draw(unsigned char *pixels, int width, int height, int stride,
-                int scale, const char *const *candidates, int count, int selected, bool dark)
+                double scale, const char *const *candidates, int count, int selected, bool dark)
 {
     cairo_surface_t *surface = cairo_image_surface_create_for_data(
-        pixels, CAIRO_FORMAT_ARGB32, width * scale, height * scale, stride);
+        pixels, CAIRO_FORMAT_ARGB32, ceil(width * scale), ceil(height * scale), stride);
     cairo_t *cr = cairo_create(surface);
     cairo_set_operator(cr, CAIRO_OPERATOR_CLEAR);
     cairo_paint(cr);

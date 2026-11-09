@@ -1,5 +1,5 @@
 Name:           link-input
-Version:        0.2.0
+Version:        0.2.1
 Release:        1%{?dist}
 Summary:        Link input method for niri
 
@@ -20,6 +20,7 @@ BuildRequires:  librime-devel
 BuildRequires:  ibus-devel
 BuildRequires:  libX11-devel
 BuildRequires:  libXext-devel
+BuildRequires:  libXrender-devel
 
 Requires:       brise
 Requires:       gtk4

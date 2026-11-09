@@ -32,7 +32,7 @@ build/demo-entry: demo/probe.c | build
 	$(CC) $(CFLAGS) -o $@ $< $(shell pkg-config --cflags --libs gtk4)
 
 build/panel-preview: panel.c panel.h settings.c settings.h | build
-	$(CC) $(CFLAGS) -DPANEL_PREVIEW -o $@ panel.c settings.c $(shell pkg-config --cflags --libs pangocairo)
+	$(CC) $(CFLAGS) -DPANEL_PREVIEW -o $@ panel.c settings.c $(shell pkg-config --cflags --libs pangocairo) -lm
 
 preview: build/panel-preview
 	cd build && ./panel-preview && ./panel-preview --dark
@@ -42,7 +42,7 @@ preview: build/panel-preview
 IBUS_CFLAGS ?= $(shell pkg-config --cflags ibus-1.0)
 IBUS_LIBS ?= $(shell pkg-config --libs ibus-1.0)
 
-X11_PANEL_PKGS = cairo-xlib x11 xext
+X11_PANEL_PKGS = cairo-xlib-xrender x11 xext xrender
 build/qingyin-ibus: ibus.c x11-panel.c x11-panel.h panel.c panel.h emoji.h pinyin-phrases.h pinyin-correction.h pinyin-fuzzy.h theme.c theme.h input-mode.h japanese.c japanese.h settings.c settings.h | build
 	$(CC) $(CPPFLAGS) $(IBUS_CFLAGS) $(shell pkg-config --cflags $(X11_PANEL_PKGS)) $(CFLAGS) $(LDFLAGS) -o $@ ibus.c x11-panel.c panel.c theme.c japanese.c settings.c $(LDLIBS) -ldl $(IBUS_LIBS) $(shell pkg-config --libs $(X11_PANEL_PKGS))
 

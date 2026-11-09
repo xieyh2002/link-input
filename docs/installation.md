@@ -14,14 +14,14 @@ bash demo/start.sh
 Fedora 44（x86_64）：
 
 ```sh
-sudo dnf install ./link-input-0.2.0-1.fc44.x86_64.rpm
+sudo dnf install ./link-input-0.2.1-1.fc44.x86_64.rpm
 systemctl --user daemon-reload
 ```
 
 Debian 13（amd64）：
 
 ```sh
-sudo apt install ./link-input_0.2.0_amd64.deb
+sudo apt install ./link-input_0.2.1_amd64.deb
 systemctl --user daemon-reload
 ```
 
@@ -34,8 +34,8 @@ systemctl --user daemon-reload
 ```sh
 sudo apt install build-essential pkg-config libwayland-dev libxkbcommon-dev \
   libcairo2-dev libpango1.0-dev libglib2.0-dev librime-dev libibus-1.0-dev \
-  libx11-dev libxext-dev
-bash packaging/deb/build.sh 0.2.0
+  libx11-dev libxext-dev libxrender-dev
+bash packaging/deb/build.sh 0.2.1
 ```
 
 生成的安装包位于 `dist/`。
@@ -47,7 +47,7 @@ bash packaging/deb/build.sh 0.2.0
 ```sh
 sudo dnf install gcc make pkgconf-pkg-config wayland-devel libxkbcommon-devel \
   cairo-devel pango-devel glib2-devel librime-devel brise \
-  ibus ibus-devel libX11-devel libXext-devel gtk4 gtk4-devel python3-gobject-base
+  ibus ibus-devel libX11-devel libXext-devel libXrender-devel gtk4 gtk4-devel python3-gobject-base
 # 可选：日文转换和彩色表情
 sudo dnf install anthy-unicode google-noto-color-emoji-fonts
 ```
